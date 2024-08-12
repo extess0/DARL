@@ -14,11 +14,7 @@ class Agent1(nn.Module):
         super(Agent1, self).__init__()
         self.nums = max(operations_d, operations_c)
         self.args = args
-        self.datalayer = nn.Sequential(
-            nn.BatchNorm1d(data_nums),
-            nn.Linear(data_nums, d_model),
-            nn.BatchNorm1d(d_model),
-        )
+        self.datalayer = nn.Linear(data_nums, d_model)
         self.emb = Attention(d_model)
         self.eval_net = QNet_generation(d_model, self.nums)
         self.target_net = QNet_generation(d_model, self.nums)
@@ -116,30 +112,27 @@ class Attention(nn.Module):
     def __init__(self, d_model):
         super(Attention, self).__init__()
         self.d_model = d_model
-        self.liner_q = nn.Linear(d_model, 192)
-        self.liner_k = nn.Linear(d_model, 192)
-        self.liner_v = nn.Linear(d_model, 192)
-        self.scale_factor = np.sqrt(32)
+        self.liner_q = nn.Linear(d_model, 256)
+        self.liner_k = nn.Linear(d_model, 256)
+        self.liner_v = nn.Linear(d_model, 256)
+        self.scale = np.sqrt(32)
         self.softmax = nn.Softmax(dim=-1)
-        self.liner3 = nn.Linear(6 * 32, d_model)
+        self.liner3 = nn.Linear(256, d_model)
         self.layer_norm = nn.LayerNorm(d_model)
-        self.conv1 = nn.Conv1d(in_channels=d_model, out_channels=64, kernel_size=1)
-        self.conv2 = nn.Conv1d(in_channels=64, out_channels=d_model, kernel_size=1)
         self.linner1 = nn.Linear(d_model, d_model)
         self.linner2 = nn.Linear(d_model, d_model)
         self.layer_norm = nn.LayerNorm(d_model)
 
 
     def forward(self, enc_inputs):
-        b_size = enc_inputs.shape[0]
-        qs = self.liner_q(enc_inputs).view(b_size, -1, 6, 32).transpose(1, 2)
-        ks = self.liner_k(enc_inputs).view(b_size, -1, 6, 32).transpose(1, 2)
-        vs = self.liner_v(enc_inputs).view(b_size, -1, 6, 32).transpose(1, 2)
-        scores = torch.matmul(qs, ks.transpose(-1, -2)) / self.scale_factor
+        enc_size = enc_inputs.shape[0]
+        qs = self.liner_q(enc_inputs).view(enc_size, -1, 8, 32).transpose(1, 2)
+        ks = self.liner_k(enc_inputs).view(enc_size, -1, 8, 32).transpose(1, 2)
+        vs = self.liner_v(enc_inputs).view(enc_size, -1, 8, 32).transpose(1, 2)
+        scores = torch.matmul(qs, ks.transpose(-1, -2)) / self.scale
         attn = self.softmax(scores)
         context = torch.matmul(attn, vs)
-        context = context.transpose(1, 2).contiguous().view(b_size, -1, 192)
-        context = torch.where(torch.isnan(context), torch.full_like(context, 0), context)
+        context = context.transpose(1, 2).contiguous().view(enc_size, -1, 256)
         output = self.liner3(context)
         enc_outputs = self.layer_norm(enc_inputs + output)
         output = self.linner1(enc_outputs)
