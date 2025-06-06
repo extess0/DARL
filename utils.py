@@ -71,44 +71,33 @@ def get_action(n_features_c, n_features_d):
 
 
 def get_binning_df(args, df, v_columns, d_columns, type):
-    if df.shape[1] > 1000:
-        X = df.iloc[:, :-1]
-        y = df.iloc[:, -1]
-        selector = SelectKBest(score_func=mutual_info_regression, k=100)
-        X_new = selector.fit_transform(X, y)
-        X_new = pd.DataFrame(X_new)
-        new_df = pd.concat([X_new, y], axis=1)
-        df.columns = df.columns.astype(str)
-        new_df.columns = new_df.columns.astype(str)
-        new_v_columns = [str(name) for name in X_new.columns]
-        new_d_columns = []
+
+    new_df = pd.DataFrame()
+    new_v_columns = []
+    new_d_columns = []
+    label = df.loc[:, args.target]
+    if type == 'cls':
+        for col in v_columns:
+            new_df[col] = df[col]
+            new_v_columns.append(col)
+        for col in v_columns:
+            ori_fe = np.array(df[col])
+            label = np.array(label)
+            new_fe = binning(ori_fe, label)
+            new_name = 'bin_' + col
+            new_df[new_name] = new_fe
+            new_d_columns.append(new_name)
+        for col in d_columns:
+            new_df[col] = df[col]
+            new_d_columns.append(col)
     else:
-        new_df = pd.DataFrame()
-        new_v_columns = []
-        new_d_columns = []
-        label = df.loc[:, args.target]
-        if type == 'cls':
-            for col in v_columns:
-                new_df[col] = df[col]
-                new_v_columns.append(col)
-            for col in v_columns:
-                ori_fe = np.array(df[col])
-                label = np.array(label)
-                new_fe = binning(ori_fe, label)
-                new_name = 'bin_' + col
-                new_df[new_name] = new_fe
-                new_d_columns.append(new_name)
-            for col in d_columns:
-                new_df[col] = df[col]
-                new_d_columns.append(col)
-        else:
-            for col in v_columns:
-                new_df[col] = df[col]
-                new_v_columns.append(col)
-            for col in d_columns:
-                new_df[col] = df[col]
-                new_d_columns.append(col)
-        new_df[args.target] = label
+        for col in v_columns:
+            new_df[col] = df[col]
+            new_v_columns.append(col)
+        for col in d_columns:
+            new_df[col] = df[col]
+            new_d_columns.append(col)
+    new_df[args.target] = label
     return new_df, new_v_columns, new_d_columns, v_columns, d_columns, df
 
 
