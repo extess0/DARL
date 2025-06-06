@@ -68,8 +68,8 @@ class TSFG:
         batch_size = args.batch_size
         memory_size = args.memory
         hidden_size = args.hidden_size
-        self.memory_generation = Replay_generation(batch_size, memory_size)
-        self.memory_discrimination = Replay_discrimination(batch_size, memory_size)
+        self.memory_generation = Replay_generation(memory_size,batch_size)
+        self.memory_discrimination = Replay_discrimination(memory_size,batch_size)
         self.dqn_generation = DQN_generation(args, data_nums, feature_nums, operations_c, operations_d, d_model, self.memory_generation,
                                self.device)
         self.dqn_discrimination = DQN_discrimination(args, operations_c, operations_d, hidden_size, d_model, self.memory_discrimination, self.device)
